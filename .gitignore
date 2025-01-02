@@ -19,5 +19,5 @@ _deps/
 
 # Ignore IDE-specific files and directories
 .idea/
-.DotSettings
+*.DotSettings
 ls
