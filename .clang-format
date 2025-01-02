@@ -1,0 +1,64 @@
+---
+# General
+TabWidth: 4
+IndentWidth: 4
+UseTab: Never
+
+# C++
+Language: Cpp
+Standard: c++20
+PointerAlignment: Left
+
+# Access Modifiers
+AccessModifierOffset: -1
+
+# Alignment
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: true
+AlignOperands: false
+AlignTrailingComments: true
+
+# Formatting
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakBeforeMultilineStrings: false
+BinPackParameters: false
+
+
+
+# Brace Style
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: false
+  AfterEnum: false
+  AfterStruct: false
+  AfterControlStatement: false
+  AfterNamespace: false
+  BeforeCatch: false
+  BeforeElse: false
+  AfterFunctionDefinition: false
+
+# Empty Lines
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+SeparateDefinitionBlocks: Never
+CompactNamespaces: true
+
+# Line Breaking
+BreakBeforeTernaryOperators: false
+BreakConstructorInitializersBeforeComma: false
+ColumnLimit: 80
+
+# Spacing
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: Always
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesBeforeTrailingComments: 1
