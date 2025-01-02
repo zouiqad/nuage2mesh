@@ -10,6 +10,6 @@ uniform float u_pointSize;  // Allows controlling point size from CPU
 
 void main()
 {
-    gl_Position = u_view * u_model * u_proj * vec4(inPosition, 1.0);
+    gl_Position = u_proj * u_view * u_model * vec4(inPosition, 1.0);
     gl_PointSize = u_pointSize; // If you enable GL_PROGRAM_POINT_SIZE
 }
