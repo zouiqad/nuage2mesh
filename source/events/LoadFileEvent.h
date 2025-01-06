@@ -1,7 +1,0 @@
-//
-//
-
-#ifndef LOADFILEEVENT_H
-#define LOADFILEEVENT_H
-
-#endif //LOADFILEEVENT_H

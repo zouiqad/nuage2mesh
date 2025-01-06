@@ -3,9 +3,10 @@
 
 namespace n2m::graphics {
 Camera::Camera ()
-    : position (0.0f, 0.0f, 4.0f)
+    : position (0.0f, 0.0f, 0.0f)
       , forward (0.0f, 0.0f, 1.0f)
       , up (0.0f, 1.0f, 0.0f)
+      , baseFov (45.0f)
       , fov (45.0f)
       , aspectRatio (16.0f / 9.0f)
       , nearZ (0.1f)
@@ -32,6 +33,12 @@ void Camera::lookAt (const glm::vec3& target) {
 
 void Camera::setUp (const glm::vec3& upVec) {
     up = upVec;
+}
+
+void Camera::zoom (const float& zoomFactor) {
+    // Zoom in or out
+    fov += zoomFactor * zoomSensitivity;
+    fov = glm::clamp (fov, fovMin, fovMax);
 }
 
 glm::mat4 Camera::getViewMatrix () const {

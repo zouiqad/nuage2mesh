@@ -3,6 +3,14 @@
 //
 
 #include "Window.h"
+
+#include "FileLoader.h"
+#include "../../patterns/events/ApplyMarchingCubesEvent.h"
+#include "../../patterns/events/LoadFileEvent.h"
+#include "../../patterns/events/MouseDragEvent.h"
+#include "../../patterns/events/MouseScrollEvent.h"
+#include "../../patterns/singleton/EventDispatcher.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -23,19 +31,20 @@ void Window::framebuffer_size_callback (GLFWwindow* window,
     glViewport (0, 0, width, height);
 }
 
-void scrollCallback (GLFWwindow* window, double xoffset, double yoffset) {
+void Window::scroll_callback (GLFWwindow* window,
+    double xoffset,
+    double yoffset) {
     // Retrieve the Window object associated with this GLFWwindow
     auto* win = static_cast<Window*> (glfwGetWindowUserPointer (window));
 
     if (!win) return;
 
-    win->zoomFactor -= static_cast<float> (yoffset) * 0.5f;
-    win->zoomFactor = glm::clamp (win->zoomFactor, 1.0f, 20.0f);
-    // Clamp zoom range
+    MouseScrollEvent mouse_scroll_event (xoffset, yoffset);
+    EventDispatcher::Instance ().publish (mouse_scroll_event);
 }
 
 // Mouse button callback
-void Window::mouseButtonCallback (GLFWwindow* window,
+void Window::mouse_button_callback (GLFWwindow* window,
     int button,
     int action,
     int mods) {
@@ -45,13 +54,11 @@ void Window::mouseButtonCallback (GLFWwindow* window,
     if (!win) return;
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        win->dragging = (action == GLFW_PRESS);
-        if (win->dragging) {
+        if (action == GLFW_PRESS) {
             glfwGetCursorPos (window, &win->lastMouseX, &win->lastMouseY);
-            std::cout << "dragging" << std::endl;
-            std::cout << "mouse positions: " << win->lastMouseX << " " <<
-                win->lastMouseY <<
-                std::endl;
+
+            // MouseDragEvent mouse_drag_event (win->lastMouseX, win->lastMouseY);
+            // EventDispatcher::Instance ().publish (mouse_drag_event);
         }
     }
 }
@@ -64,16 +71,13 @@ void Window::cursorPositionCallback (GLFWwindow* window,
     auto* win = static_cast<Window*> (glfwGetWindowUserPointer (window));
     if (!win) return;
 
-    if (win->dragging) {
+    if (glfwGetMouseButton (window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        // Only drag when holding the left mouse button
         double dx = xpos - win->lastMouseX;
         double dy = ypos - win->lastMouseY;
 
-        // Update rotation angles (adjust sensitivity as needed)
-        win->rotationX += static_cast<float> (dy) * 0.1f;
-        win->rotationY += static_cast<float> (dx) * 0.1f;
-
-        // Clamp vertical rotation to avoid flipping
-        win->rotationX = glm::clamp (win->rotationX, -90.0f, 90.0f);
+        MouseDragEvent mouse_drag_event (dx, dy);
+        EventDispatcher::Instance ().publish (mouse_drag_event);
 
         win->lastMouseX = xpos;
         win->lastMouseY = ypos;
@@ -131,9 +135,9 @@ bool Window::init (int width, int height, const std::string& title) {
 
     // Callbacks
     glfwSetFramebufferSizeCallback (window, framebuffer_size_callback);
-    glfwSetMouseButtonCallback (window, mouseButtonCallback);
+    glfwSetMouseButtonCallback (window, mouse_button_callback);
     glfwSetCursorPosCallback (window, cursorPositionCallback);
-    glfwSetScrollCallback (window, scrollCallback);
+    glfwSetScrollCallback (window, scroll_callback);
 
 
     // init imgui
@@ -191,28 +195,58 @@ void Window::render_imgui () const {
     static float f     = 0.0f;
     static int counter = 0;
 
-    ImGui::Begin ("Hello, world!");
-    // Create a window called "Hello, world!" and append into it.
+    // Create a window and append into it.
+    ImGui::Begin ("Settings!");
 
-    ImGui::Text ("This is some useful text.");
-    // Display some text (you can use a format strings too)
-    bool checkboxValue = true;
-    ImGui::Checkbox ("test", &checkboxValue);
-    // Edit bools storing our window open/close state
-    ImGui::Checkbox ("Another Window", &checkboxValue);
+    if (ImGui::BeginMenu ("File")) {
+        if (ImGui::MenuItem ("Open..", "Ctrl+O")) {
+            std::string filePath = FileLoader::openFileDialog ();
 
-    ImGui::SliderFloat ("float", &f, 0.0f, 1.0f);
+            LoadFileEvent load_file_event (filePath);
+            EventDispatcher::Instance ().publish (load_file_event);
+        }
+        if (ImGui::MenuItem ("Save", "Ctrl+S")) {
+            /* Do stuff */
+        }
+        if (ImGui::MenuItem ("Close", "Ctrl+W")) {
+        }
+        ImGui::EndMenu ();
+    }
 
-    float clear_color = 0.5f;
-    // Edit 1 float using a slider from 0.0f to 1.0f
-    ImGui::ColorEdit3 ("clear color", (float*)&clear_color);
-    // Edit 3 floats representing a color
+    // Collapsible section for reconstruction algorithms
+    if (ImGui::CollapsingHeader ("Reconstruction Algorithms")) {
+        // Marching Cubes section
+        static int gridResolution = 64; // Default resolution
+        ImGui::Text ("Marching Cubes");
 
-    if (ImGui::Button ("Button"))
-        // Buttons return true when clicked (most widgets return true when edited/activated)
-        counter++;
-    ImGui::SameLine ();
-    ImGui::Text ("counter = %d", counter);
+        // Slider for grid resolution
+        ImGui::SliderInt ("Grid Resolution", &gridResolution, 2, 512, "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+
+        // Ensure grid resolution remains a power of 2
+        if (gridResolution < 2) gridResolution = 2;
+        gridResolution = std::pow (2, std::floor (std::log2 (gridResolution)));
+
+        // Button to apply marching cubes
+        if (ImGui::Button ("Apply Marching Cubes")) {
+            ApplyMarchingCubesEvent apply_marching_cubes_event (gridResolution);
+            EventDispatcher::Instance ().publish (apply_marching_cubes_event);
+        }
+
+        ImGui::Separator ();
+
+        // Additional placeholders for future algorithms
+        ImGui::TextDisabled ("Poisson Reconstruction (Coming Soon)");
+        ImGui::Button ("Apply Poisson") ?
+            ImGui::Text ("Not implemented yet!") :
+            (void)0;
+
+        ImGui::TextDisabled ("Surface Nets (Coming Soon)");
+        ImGui::Button ("Apply Surface Nets") ?
+            ImGui::Text ("Not implemented yet!") :
+            (void)0;
+    }
+
 
     ImGui::Text ("Application average %.3f ms/frame (%.1f FPS)",
         1000.0f / io->Framerate, io->Framerate);

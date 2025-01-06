@@ -1,7 +1,7 @@
 #ifndef EVENTDISPATCHER_H
 #define EVENTDISPATCHER_H
 
-#include "../../events/Event.h"
+#include "../../patterns/events/Event.h"
 #include <functional>
 #include <map>
 #include <vector>
@@ -11,6 +11,7 @@
 
 namespace n2m {
 class EventDispatcher {
+public:
     static EventDispatcher& Instance () {
         static EventDispatcher instance;
         return instance;
@@ -24,7 +25,7 @@ class EventDispatcher {
 
         // We store a std::function<void(const BaseEvent&)> in the map,
         // but we do a little type-erasing trick to wrap the typed callback.
-        auto wrapper = [fn = std::move (callback)](const events::Event& event) {
+        auto wrapper = [fn = std::move (callback)](const Event& event) {
             // Try to cast the base event to the derived type
             // If it fails, ignore. If it succeeds, call the function.
             const T* derived = dynamic_cast<const T*> (&event);
@@ -37,7 +38,7 @@ class EventDispatcher {
     }
 
     // Dispatch any event. We'll figure out which subscribers should get it.
-    void publish (const events::Event& event) {
+    void publish (const Event& event) {
         auto typeIndex = std::type_index (typeid (event));
         auto it        = m_subscribers.find (typeIndex);
         if (it != m_subscribers.end ()) {
@@ -55,7 +56,7 @@ private:
 
     // Map from event's type_index to a list of callbacks that handle that event type
     std::map<std::type_index, std::vector<std::function<void
-         (const events::Event&)> > >
+         (const Event&)> > >
     m_subscribers;
 };
 }
