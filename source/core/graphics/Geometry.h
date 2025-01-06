@@ -12,7 +12,6 @@ enum class PrimitiveType {
     Triangles
 };
 
-
 class Geometry {
 public:
     Geometry ();
@@ -23,7 +22,6 @@ public:
     // 'indices' can be empty if we are drawing non-indexed geometry (like a pure point cloud).
     void upload (const std::vector<GLfloat>& vertices,
         int componentsPerVertex,
-        PrimitiveType primitive,
         const std::vector<unsigned int>& indices = {});
 
     void cleanup () const;
@@ -32,19 +30,34 @@ public:
     void unbind () const;
 
     // The actual draw call
-    void draw () const;
+    void draw (const PrimitiveType& type = PrimitiveType::Points) const;
+
+    // Geometry metrics
+    glm::vec3 getCenterOfMass () const;
+
+    void setExtents (const GLfloat& x,
+        const GLfloat& y,
+        const GLfloat& z);
 
 protected:
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
 
-    GLsizei vertexCount     = 0;
-    GLsizei indexCount      = 0;
-    PrimitiveType primitive = PrimitiveType::Points;
-
     // Internally used for glDrawArrays or glDrawElements
     static GLenum convertPrimitiveType (PrimitiveType type);
+
+    GLsizei vertexCount = 0;
+    GLsizei indexCount  = 0;
+
+    // Geometry bounds
+    GLfloat maxX = 0.0f;
+    GLfloat maxY = 0.0f;
+    GLfloat maxZ = 0.0f;
+
+    GLfloat minX = 0.0f;
+    GLfloat minY = 0.0f;
+    GLfloat minZ = 0.0f;
 };
 }
 
