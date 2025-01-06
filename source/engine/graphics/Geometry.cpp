@@ -1,3 +1,7 @@
+//
+// Created by zouiqad on 01/01/25.
+//
+
 #include "Geometry.h"
 #include <iostream>
 
@@ -6,7 +10,6 @@ Geometry::Geometry () {
 }
 
 Geometry::~Geometry () {
-    std::cout << "Geometry destroyed!!!.\n";
 }
 
 void Geometry::cleanup () const {
@@ -20,11 +23,14 @@ void Geometry::cleanup () const {
 
 void Geometry::upload (const std::vector<GLfloat>& vertexData,
     int componentsPerVertex,
+    PrimitiveType primitive,
     const std::vector<unsigned int>& indices) {
     // init vao vbo ebo
     glGenVertexArrays (1, &vao);
     glGenBuffers (1, &vbo);
     glGenBuffers (1, &ebo);
+
+    this->primitive = primitive;
 
     vertexCount = static_cast<int> (vertexData.size () / componentsPerVertex);
 
@@ -64,8 +70,8 @@ void Geometry::upload (const std::vector<GLfloat>& vertexData,
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void Geometry::draw (const PrimitiveType& type) const {
-    GLenum mode = convertPrimitiveType (type);
+void Geometry::draw () const {
+    GLenum mode = convertPrimitiveType (primitive);
 
     glBindVertexArray (vao);
     if (indexCount > 0) {
@@ -85,23 +91,5 @@ GLenum Geometry::convertPrimitiveType (const PrimitiveType type) {
     }
     // default
     return GL_TRIANGLES;
-}
-
-// Metrics
-glm::vec3 Geometry::getCenterOfMass () const {
-    return glm::vec3 ((this->maxX + this->minX) / 2,
-        (this->maxY + this->minY) / 2, (this->maxZ + this->minZ) / 2);
-}
-
-void Geometry::setExtents (const GLfloat& x,
-    const GLfloat& y,
-    const GLfloat& z) {
-    if (x > this->maxX) maxX = x;
-    if (y > this->maxY) maxY = y;
-    if (z > this->maxZ) maxZ = z;
-
-    if (x < this->minX) minX = x;
-    if (y < this->minY) minY = y;
-    if (z < this->minZ) minZ = z;
 }
 }

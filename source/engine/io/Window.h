@@ -14,6 +14,7 @@ public:
     Window () = default;
     ~Window ();
 
+
     bool init (int width, int height, const std::string& title);
 
     bool init_imgui ();
@@ -32,15 +33,17 @@ public:
     // Access to raw GLFWwindow pointer (if needed by Renderer, etc.)
     GLFWwindow* getNativeWindow () const { return window; }
 
+    bool dragging     = false;
+    double lastMouseX = 0.0, lastMouseY = 0.0;
+    float rotationX   = 0.0f, rotationY = 0.0f; // Track rotation angles
+    float zoomFactor  = 1.0f;
+
 private:
     GLFWwindow* window = nullptr;
     ImGuiIO* io        = nullptr;
 
-    double lastMouseX = 0.0;
-    double lastMouseY = 0.0;
 
-    // Callbacks
-    static void mouse_button_callback (GLFWwindow* window,
+    static void mouseButtonCallback (GLFWwindow* window,
         int button,
         int action,
         int mods);
@@ -52,10 +55,6 @@ private:
     static void framebuffer_size_callback (GLFWwindow* window,
         int width,
         int height);
-
-    static void scroll_callback (GLFWwindow* window,
-        double xoffset,
-        double yoffset);
 };
 }
 

@@ -21,7 +21,6 @@ public:
     void setPosition (const glm::vec3& pos);
     void lookAt (const glm::vec3& target);
     void setUp (const glm::vec3& upVec);
-    void zoom (const float& zoomFactor);
 
     glm::mat4 getViewMatrix () const;
     glm::mat4 getProjectionMatrix () const;
@@ -35,16 +34,10 @@ private:
     glm::vec3 up;
 
     // For perspective
-    float fov;
+    float fov; // in degrees
     float aspectRatio;
     float nearZ;
     float farZ;
-
-    // Zoom
-    float baseFov;
-    float zoomSensitivity = 1.0f;
-    float fovMin          = 30.0f;
-    float fovMax          = 90.0f;
 };
 } // namespace MyApp::Graphics
 

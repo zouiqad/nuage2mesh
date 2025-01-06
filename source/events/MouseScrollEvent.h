@@ -1,0 +1,7 @@
+//
+//
+
+#ifndef MOUSESCROLLEVENT_H
+#define MOUSESCROLLEVENT_H
+
+#endif //MOUSESCROLLEVENT_H
