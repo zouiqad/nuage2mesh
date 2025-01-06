@@ -4,16 +4,17 @@
 
 #ifndef PROGRAM_H
 #define PROGRAM_H
+
 #include <string>
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
 
 namespace n2m::graphics {
-class Program {
+class Shader {
 public:
-    Program ();
-    ~Program ();
+    Shader ();
+    ~Shader ();
 
     // Load vertex & fragment shaders from file paths
     bool loadShaders (const std::string& vertPath, const std::string& fragPath);
@@ -39,7 +40,6 @@ private:
     bool linkProgram (GLuint vertexShader, GLuint fragmentShader);
 
     // Helpers for reading files and checking errors
-    std::string readFile (const std::string& filePath);
     bool checkCompileErrors (GLuint shader, const std::string& type);
     bool checkLinkErrors (GLuint program);
 };

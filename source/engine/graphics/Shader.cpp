@@ -2,22 +2,22 @@
 // Created by zouiqad on 01/01/25.
 //
 
-#include "Program.h"
-#include <fstream>
-#include <sstream>
+#include "Shader.h"
+
+#include "../io/FileLoader.h"
 #include <iostream>
 
 namespace n2m::graphics {
-Program::Program () : programID ((0)) {
+Shader::Shader () : programID ((0)) {
 }
 
-Program::~Program () {
+Shader::~Shader () {
     if (programID != 0) {
         glDeleteProgram (programID);
     }
 }
 
-bool Program::loadShaders (const std::string& vertPath,
+bool Shader::loadShaders (const std::string& vertPath,
     const std::string& fragPath) {
     GLuint vertShader = 0;
     GLuint fragShader = 0;
@@ -49,11 +49,11 @@ bool Program::loadShaders (const std::string& vertPath,
     return true;
 }
 
-bool Program::createShaderFromFile (const std::string& filePath,
+bool Shader::createShaderFromFile (const std::string& filePath,
     GLuint shaderType,
     GLuint& shaderID) {
     // Read file
-    std::string shaderSource = readFile (filePath);
+    std::string shaderSource = io::FileLoader::readFile (filePath);
     if (shaderSource.empty ()) {
         std::cerr << "Shader file is empty or failed to read: " << filePath <<
             std::endl;
@@ -75,7 +75,7 @@ bool Program::createShaderFromFile (const std::string& filePath,
     return true;
 }
 
-bool Program::linkProgram (unsigned int vertexShader,
+bool Shader::linkProgram (unsigned int vertexShader,
     unsigned int fragmentShader) {
     // Create program if not already
     programID = glCreateProgram ();
@@ -93,18 +93,7 @@ bool Program::linkProgram (unsigned int vertexShader,
     return true;
 }
 
-std::string Program::readFile (const std::string& filePath) {
-    std::ifstream file (filePath, std::ios::in | std::ios::binary);
-    if (!file) {
-        std::cerr << "Could not open shader file: " << filePath << std::endl;
-        return std::string ();
-    }
-    std::stringstream buffer;
-    buffer << file.rdbuf ();
-    return buffer.str ();
-}
-
-bool Program::checkCompileErrors (unsigned int shader,
+bool Shader::checkCompileErrors (unsigned int shader,
     const std::string& type) {
     int success;
     glGetShaderiv (shader, GL_COMPILE_STATUS, &success);
@@ -121,7 +110,7 @@ bool Program::checkCompileErrors (unsigned int shader,
     return true;
 }
 
-bool Program::checkLinkErrors (unsigned int program) {
+bool Shader::checkLinkErrors (unsigned int program) {
     int success;
     glGetProgramiv (program, GL_LINK_STATUS, &success);
     if (!success) {
@@ -136,7 +125,7 @@ bool Program::checkLinkErrors (unsigned int program) {
     return true;
 }
 
-void Program::use () const {
+void Shader::use () const {
     if (programID != 0) {
         glUseProgram (programID);
     }
@@ -146,39 +135,39 @@ void Program::use () const {
 // Example uniform setters
 // -------------------------
 
-void Program::setUniform (const std::string& name, float value) {
+void Shader::setUniform (const std::string& name, float value) {
     int loc = glGetUniformLocation (programID, name.c_str ());
     if (loc != -1) {
         glUniform1f (loc, value);
     }
 }
 
-void Program::setUniform (const std::string& name, int value) {
+void Shader::setUniform (const std::string& name, int value) {
     int loc = glGetUniformLocation (programID, name.c_str ());
     if (loc != -1) {
         glUniform1i (loc, value);
     }
 }
 
-void Program::setUniform (const std::string& name, bool value) {
+void Shader::setUniform (const std::string& name, bool value) {
     setUniform (name, static_cast<int> (value));
 }
 
-void Program::setUniform (const std::string& name, const glm::vec3& vector) {
+void Shader::setUniform (const std::string& name, const glm::vec3& vector) {
     int loc = glGetUniformLocation (programID, name.c_str ());
     if (loc != -1) {
         glUniform3fv (loc, 1, &vector[0]);
     }
 }
 
-void Program::setUniform (const std::string& name, const glm::vec4& vector) {
+void Shader::setUniform (const std::string& name, const glm::vec4& vector) {
     int loc = glGetUniformLocation (programID, name.c_str ());
     if (loc != -1) {
         glUniform4fv (loc, 1, &vector[0]);
     }
 }
 
-void Program::setUniform (const std::string& name, const glm::mat4& matrix) {
+void Shader::setUniform (const std::string& name, const glm::mat4& matrix) {
     int loc = glGetUniformLocation (programID, name.c_str ());
     if (loc != -1) {
         glUniformMatrix4fv (loc, 1, GL_FALSE, &matrix[0][0]);

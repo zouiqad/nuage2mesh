@@ -1,0 +1,7 @@
+//
+//
+
+#ifndef MOUSEDRAGEVENT_H
+#define MOUSEDRAGEVENT_H
+
+#endif //MOUSEDRAGEVENT_H
