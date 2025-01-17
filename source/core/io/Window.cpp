@@ -1,15 +1,7 @@
-//
-// Created by zouiqad on 31/12/24.
-//
-
 #include "Window.h"
 
-#include "FileLoader.h"
-#include "../../patterns/events/ApplyMarchingCubesEvent.h"
-#include "../../patterns/events/LoadFileEvent.h"
-#include "../../patterns/events/MouseDragEvent.h"
-#include "../../patterns/events/MouseScrollEvent.h"
-#include "../../patterns/singleton/EventDispatcher.h"
+#include "FileIO.h"
+
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -153,6 +145,16 @@ bool Window::init (int width, int height, const std::string& title) {
     glViewport (0, 0, width, height);
     glEnable (GL_DEPTH_TEST);
 
+    // Sub to events
+    EventDispatcher::Instance ().subscribe<SceneStateEvent> (
+        [this](SceneStateEvent event) {
+            this->sceneMetrics = event.metrics; // update scene metrics
+        });
+
+    EventDispatcher::Instance ().subscribe<TimerEndEvent> (
+        [this](TimerEndEvent event) {
+            this->executionTime = event.duration; // update scene metrics
+        });
     return true;
 }
 
@@ -200,14 +202,27 @@ void Window::render_imgui () const {
 
     if (ImGui::BeginMenu ("File")) {
         if (ImGui::MenuItem ("Open..", "Ctrl+O")) {
-            std::string filePath = FileLoader::openFileDialog ();
+            std::string filePath = FileIO::openFileDialog ();
 
             LoadFileEvent load_file_event (filePath);
             EventDispatcher::Instance ().publish (load_file_event);
         }
-        if (ImGui::MenuItem ("Save", "Ctrl+S")) {
-            /* Do stuff */
+        if (ImGui::MenuItem ("Export as OBJ")) {
+            ExportFileEvent export_file_event (
+                "resources/models/exported_mesh.obj",
+                ExportFormat::OBJ);
+
+            EventDispatcher::Instance ().publish (export_file_event);
         }
+
+        if (ImGui::MenuItem ("Export as STL")) {
+            ExportFileEvent export_file_event (
+                "resources/models/exported_mesh.stl",
+                ExportFormat::STL);
+
+            EventDispatcher::Instance ().publish (export_file_event);
+        }
+
         if (ImGui::MenuItem ("Close", "Ctrl+W")) {
         }
         ImGui::EndMenu ();
@@ -229,27 +244,131 @@ void Window::render_imgui () const {
 
         // Button to apply marching cubes
         if (ImGui::Button ("Apply Marching Cubes")) {
-            ApplyMarchingCubesEvent apply_marching_cubes_event (gridResolution);
+            MarchingCubesEvent apply_marching_cubes_event (gridResolution);
             EventDispatcher::Instance ().publish (apply_marching_cubes_event);
         }
 
         ImGui::Separator ();
+        static FastTriangulationParameters fastTriangulationParams;
+        ImGui::Text ("Fast Triangulation");
 
-        // Additional placeholders for future algorithms
-        ImGui::TextDisabled ("Poisson Reconstruction (Coming Soon)");
-        ImGui::Button ("Apply Poisson") ?
-            ImGui::Text ("Not implemented yet!") :
-            (void)0;
+        ImGui::SliderFloat ("Search Radius",
+            &fastTriangulationParams.searchRadius, 0.01f, 0.1f, "%3f",
+            ImGuiSliderFlags_AlwaysClamp);
 
-        ImGui::TextDisabled ("Surface Nets (Coming Soon)");
-        ImGui::Button ("Apply Surface Nets") ?
-            ImGui::Text ("Not implemented yet!") :
-            (void)0;
+
+        ImGui::SliderInt ("Number of nearest neighbors ",
+            &fastTriangulationParams.kSearch, 5,
+            50,
+            "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+
+        ImGui::Checkbox ("Enforces consistency in normal directions ",
+            &fastTriangulationParams.normalConsistency);
+
+
+        // Button to apply fast triangulation
+        if (ImGui::Button ("Fast Triangulation")) {
+            FastTriangulationEvent fast_triangulation_event (
+                fastTriangulationParams);
+            EventDispatcher::Instance ().publish (fast_triangulation_event);
+        }
+        ImGui::Separator ();
+
+        // Poisson Reconstruction section
+        static PoissonReconstructionParameters poissonParams;
+        ImGui::Text ("Poisson Reconstruction");
+
+        ImGui::SliderInt ("k-Nearest Neighbors", &poissonParams.k_search, 5, 50,
+            "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderInt ("Octree Depth", &poissonParams.depth, 4, 12, "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderInt ("Solver Divide", &poissonParams.solver_divide, 1, 16,
+            "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderInt ("Iso Divide", &poissonParams.iso_divide, 1, 16, "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat ("Samples Per Node", &poissonParams.samples_per_node,
+            0.1f, 10.0f, "%.2f",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat ("Bounding Box Scale", &poissonParams.scale, 1.0f,
+            2.0f, "%.2f",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Checkbox ("Confidence in Normals", &poissonParams.confidence);
+
+        if (ImGui::Button ("Apply Poisson Reconstruction")) {
+            PoissonEvent poisson_reconstruction_event (
+                poissonParams);
+            EventDispatcher::Instance ().publish (poisson_reconstruction_event);
+        }
+        ImGui::Separator ();
+    }
+
+    ImGui::Separator ();
+
+    if (ImGui::CollapsingHeader ("Pre-processing operations")) {
+        // Normal Estimation section
+        static int kSearchNormals = 20;
+        ImGui::Text ("Normal Estimation");
+        ImGui::SliderInt ("k-Nearest Neighbors", &kSearchNormals, 5, 50, "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        if (ImGui::Button ("Estimate Normals")) {
+            EstimateNormalsEvent estimate_normals_event (kSearchNormals);
+            EventDispatcher::Instance ().publish (estimate_normals_event);
+        }
+
+        ImGui::Separator ();
+
+        // Outliers Removal (Cloud Point Cleaning) section
+        static int meanK        = 50;
+        static float stddevMul = 1.0;
+        ImGui::Text ("Outliers Removal (Cloud Point Cleaning)");
+        ImGui::SliderInt ("Mean K", &meanK, 10, 200, "%d",
+            ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat ("Std Dev Multiplier", &stddevMul, 0.1f, 3.0f,
+            "%.2f",
+            ImGuiSliderFlags_AlwaysClamp);
+        if (ImGui::Button ("Remove Outliers")) {
+            RemoveOutliersEvent remove_outliers_event (meanK, stddevMul);
+            EventDispatcher::Instance ().publish (remove_outliers_event);
+        }
+    }
+
+    ImGui::Separator ();
+    ImGui::Text ("Reconstruction algorithm execution time %.3f ms",
+        this->executionTime);
+
+    ImGui::Separator ();
+    ImGui::SeparatorText ("Vizualization mode");
+    const char* items[]             = {"Solid", "Wireframe"};
+    static const char* current_item = items[0];
+
+    //RenderModeEvent render_mode_event(RenderModeEvent::renderMode::Solid);
+    for (int n = 0; n < IM_ARRAYSIZE (items); n++) {
+        bool is_selected = (current_item == items[n]);
+        // You can store your selection however you want, outside or inside your objects
+        if (ImGui::Selectable (items[n], is_selected)) {
+            current_item = items[n];
+            RenderModeEvent render_mode_event (current_item);
+            EventDispatcher::Instance ().publish (render_mode_event);
+        }
     }
 
 
-    ImGui::Text ("Application average %.3f ms/frame (%.1f FPS)",
+    ImGui::SeparatorText ("Statistics");
+    ImGui::Text ("Number of vertex %d", this->sceneMetrics.vertexCount);
+    ImGui::Text ("Number of triangles %d", this->sceneMetrics.triangleCount);
+
+    ImGui::Text ("Average %.3f ms/frame (%.1f FPS)",
         1000.0f / io->Framerate, io->Framerate);
+
+
+    ImGui::Separator ();
+    if (ImGui::Button ("Reset Geometry")) {
+        ResetGeometryEvent reset_geometry_event;
+        EventDispatcher::Instance ().publish (reset_geometry_event);
+    }
     ImGui::End ();
 }
 

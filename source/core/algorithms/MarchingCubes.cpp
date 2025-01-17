@@ -1,12 +1,12 @@
 #include "MarchingCubes.h"
+
+#include "core/utils/Timer.h"
 #include <algorithm> // for std::min, std::max
 #include <cmath>
 #include <iostream>
 
 namespace n2m::graphics {
-/* -----------------------------------------------------------
-   Precomputed Marching Cubes edge and triangle tables
-   ----------------------------------------------------------- */
+// credit for edge/tri tables https://gist.github.com/dwilliamson/c041e3454a713e58baf6e4f8e5fffecd
 const int MarchingCubes::edgeTable[256] = {
     0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f,
     0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
@@ -42,7 +42,6 @@ const int MarchingCubes::edgeTable[256] = {
     0x406, 0x30a, 0x203, 0x109, 0x000
 };
 
-// triTable[i][0..15] gives up to 5 triangles (15 indices in sets of 3)
 const int MarchingCubes::triTable[256][16] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -302,11 +301,16 @@ const int MarchingCubes::triTable[256][16] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
-Geometry MarchingCubes::reconstructMesh (const std::vector<glm::vec3>& points,
+std::shared_ptr<Mesh> MarchingCubes::reconstruct (
+    const std::vector<glm::vec3>& points,
     int gridResolution) {
+    // Start timer
+    Timer timer ("MarchingCubes::runMarchingCubes");
+    timer.start ();
+
     if (points.empty () || gridResolution < 2) {
         std::cerr << "[MarchingCubess] Invalid input." << std::endl;
-        return Geometry (); // empty
+        return nullptr; // empty
     }
 
     // 1) Compute bounding box of point cloud
@@ -317,13 +321,13 @@ Geometry MarchingCubes::reconstructMesh (const std::vector<glm::vec3>& points,
     std::vector<float> grid = buildOccupancyGrid (points, minBound, maxBound,
         gridResolution);
 
-    // 3) Run Marching Cubes on the occupancy grid
+    // Run Marching Cubes on the occupancy grid
     std::vector<glm::vec3> mcVerts;
     std::vector<unsigned int> mcIndices;
     runMarchingCubes (grid, minBound, maxBound, gridResolution, mcVerts,
         mcIndices);
 
-    // 4) Convert into a flat array for your Geometry
+    // Convert into a flat array
     std::vector<GLfloat> vertexData;
     vertexData.reserve (mcVerts.size () * 3);
     for (const auto& v : mcVerts) {
@@ -333,15 +337,13 @@ Geometry MarchingCubes::reconstructMesh (const std::vector<glm::vec3>& points,
     }
 
     // Create and upload into a Geometry
-    Geometry geo;
+    std::shared_ptr<Mesh> new_mesh = std::make_shared<Mesh> ();
     // Triangles are produced by MC
-    geo.upload (vertexData, 3, PrimitiveType::Triangles, mcIndices);
-    return geo;
+    new_mesh->upload (vertexData, 3, mcIndices);
+    return new_mesh;
 }
 
-// -------------------------------------------------------------
-// computeBoundingBox
-// -------------------------------------------------------------
+
 void MarchingCubes::computeBoundingBox (
     const std::vector<glm::vec3>& points,
     glm::vec3& minBound,
@@ -363,9 +365,7 @@ void MarchingCubes::computeBoundingBox (
     }
 }
 
-// -------------------------------------------------------------
-// buildOccupancyGrid
-// -------------------------------------------------------------
+
 std::vector<float> MarchingCubes::buildOccupancyGrid (
     const std::vector<glm::vec3>& points,
     glm::vec3& minBound,
@@ -595,8 +595,6 @@ void MarchingCubes::runMarchingCubes (
                     int idx2 = triTable[cubeIndex][i + 2];
 
                     // push them to outVertices, record their indices
-                    // note that for a big mesh, you might want a hash or map to
-                    // deduplicate identical edges. But for clarity, we just push them all.
                     unsigned int vbase = (unsigned int)outVertices.size ();
                     outVertices.push_back (edgeVertex[idx0]);
                     outVertices.push_back (edgeVertex[idx1]);

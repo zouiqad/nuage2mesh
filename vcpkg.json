@@ -1,5 +1,6 @@
 {
   "dependencies": [
+    "pcl",
     "glad",
     "glfw3",
     {

@@ -1,4 +1,9 @@
 #include "Scene.h"
+
+#include "patterns/singleton/EventDispatcher.h"
+#include "patterns/events/SceneStateEvent.h"
+
+
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace n2m::graphics {
@@ -29,12 +34,18 @@ void Scene::setFocusGeometry (const std::shared_ptr<Geometry>& geometry) {
         node->setTranslation (-center); // Offset by the center
         addNode (node);
     }
+
+    SceneStateEvent::SceneMetrics metrics;
+    metrics.vertexCount   = geometry->vertexCount;
+    metrics.triangleCount = geometry->indicesCount / 3.0f;
+    EventDispatcher::Instance ().publish (SceneStateEvent (metrics));
 }
 
 const std::vector<std::shared_ptr<Node> >& Scene::getAllNodes () const {
     return nodes;
 }
 
+// @todo add per scene render
 // void Scene::render () {
 //     // Loop through nodes and render associated geometry
 //     for (const auto& node : nodes) {
@@ -44,10 +55,10 @@ const std::vector<std::shared_ptr<Node> >& Scene::getAllNodes () const {
 //             // Apply node's transformation matrix
 //             glm::mat4 modelMatrix = node->getTransformationMatrix ();
 //
-//             // // 4. Set uniform
-//             // YourShader.setUniform("u_model", modelMatrix);
+//             // Set uniform
+//             // shader.setUniform("u_model", modelMatrix);
 //             // geometry.draw ();
 //         }
 //     }
 // }
-} // namespace n2m::graphics
+}

@@ -2,31 +2,50 @@
 #include <iostream>
 
 namespace n2m::graphics {
-Geometry::Geometry () {
-}
-
 Geometry::~Geometry () {
-    std::cout << "Geometry destroyed!!!.\n";
+    deleteBuffers ();
 }
 
-void Geometry::cleanup () const {
-    if (ebo)
-        glDeleteBuffers (1, &ebo);
-    if (vbo)
-        glDeleteBuffers (1, &vbo);
-    if (vao)
-        glDeleteVertexArrays (1, &vao);
+void Geometry::createBuffers () {
+    // Generate a VAO
+    glGenVertexArrays (1, &VAO);
+    // Generate a VBO
+    glGenBuffers (1, &VBO);
+    // We won't generate EBO here unless needed
+}
+
+void Geometry::deleteBuffers () {
+    if (EBO != 0) {
+        glDeleteBuffers (1, &EBO);
+        EBO = 0;
+    }
+    if (VBO != 0) {
+        glDeleteBuffers (1, &VBO);
+        VBO = 0;
+    }
+    if (VAO != 0) {
+        glDeleteVertexArrays (1, &VAO);
+        VAO = 0;
+    }
+}
+
+void Geometry::bindVAO () const {
+    glBindVertexArray (VAO);
+}
+
+void Geometry::unbindVAO () const {
+    glBindVertexArray (0);
 }
 
 void Geometry::upload (const std::vector<GLfloat>& vertexData,
     int componentsPerVertex,
-    PrimitiveType type,
     const std::vector<unsigned int>& indices) {
     // init vao vbo ebo
-    glGenVertexArrays (1, &vao);
-    glGenBuffers (1, &vbo);
-    glGenBuffers (1, &ebo);
+    glGenVertexArrays (1, &VAO);
+    glGenBuffers (1, &VBO);
+    glGenBuffers (1, &EBO);
 
+    std::cout << "uploading vertex data" << vertexData.size () << std::endl;
 
     // Ensure componentsPerVertex is 3 for glm::vec3 storage
     if (componentsPerVertex != 3) {
@@ -44,17 +63,14 @@ void Geometry::upload (const std::vector<GLfloat>& vertexData,
             );
     }
 
-    std::cout << "vertexdata size" << vertexData.size () << std::endl;
-
-    std::cout << "vertices size" << vertices.size () << std::endl;
-    this->type = type;
+    this->indices.clear ();
+    this->indices = indices;
 
     vertexCount = static_cast<int> (vertexData.size () / componentsPerVertex);
 
-    glBindVertexArray (vao);
-
+    glBindVertexArray (VAO);
     // upload vertex data
-    glBindBuffer (GL_ARRAY_BUFFER, vbo);
+    glBindBuffer (GL_ARRAY_BUFFER, VBO);
     glBufferData (GL_ARRAY_BUFFER,
         vertexCount * componentsPerVertex * sizeof (GLfloat),
         vertexData.data (),
@@ -62,13 +78,13 @@ void Geometry::upload (const std::vector<GLfloat>& vertexData,
 
     // If we have indices, use them
     if (!indices.empty ()) {
-        glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData (GL_ELEMENT_ARRAY_BUFFER,
             indices.size () * sizeof (unsigned int),
             indices.data (),
             GL_STATIC_DRAW);
 
-        indexCount = static_cast<GLsizei> (indices.size ());
+        indicesCount = static_cast<GLsizei> (indices.size ());
     }
 
     // Setup vertex attribute (location = 0 for positions)
@@ -88,27 +104,15 @@ void Geometry::upload (const std::vector<GLfloat>& vertexData,
 }
 
 void Geometry::draw () const {
-    GLenum mode = convertPrimitiveType (type);
-
-    glBindVertexArray (vao);
-    if (indexCount > 0) {
-        glDrawElements (mode, indexCount, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray (VAO);
+    if (indicesCount > 0) {
+        glDrawElements (primitive_type, indicesCount, GL_UNSIGNED_INT, nullptr);
     } else {
-        glDrawArrays (mode, 0, vertexCount);
+        glDrawArrays (primitive_type, 0, vertexCount);
     }
     glBindVertexArray (0);
 }
 
-
-GLenum Geometry::convertPrimitiveType (const PrimitiveType type) {
-    switch (type) {
-    case PrimitiveType::Points: return GL_POINTS;
-    case PrimitiveType::Lines: return GL_LINES;
-    case PrimitiveType::Triangles: return GL_TRIANGLES;
-    }
-    // default
-    return GL_TRIANGLES;
-}
 
 // Metrics
 glm::vec3 Geometry::getCenterOfMass () const {

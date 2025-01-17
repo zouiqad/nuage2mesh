@@ -1,10 +1,6 @@
-//
-// Created by zouiqad on 01/01/25.
-//
-
 #include "Shader.h"
 
-#include "../io/FileLoader.h"
+#include "core/io/FileIO.h"
 #include <iostream>
 
 namespace n2m::graphics {
@@ -53,7 +49,7 @@ bool Shader::createShaderFromFile (const std::string& filePath,
     GLuint shaderType,
     GLuint& shaderID) {
     // Read file
-    std::string shaderSource = io::FileLoader::readFile (filePath);
+    std::string shaderSource = io::FileIO::readFile (filePath);
     if (shaderSource.empty ()) {
         std::cerr << "Shader file is empty or failed to read: " << filePath <<
             std::endl;

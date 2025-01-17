@@ -6,57 +6,61 @@
 #include <glm/glm.hpp>
 
 namespace n2m::graphics {
-enum class PrimitiveType {
-    Points,
-    Lines,
-    Triangles
-};
-
 class Geometry {
 public:
-    Geometry ();
-    virtual ~Geometry ();
+    Geometry() = default;
+
+    virtual ~Geometry();
 
 
-    // Upload data to the GPU. Overloads or templated methods are possible.
-    // 'indices' can be empty if we are drawing non-indexed geometry (like a pure point cloud).
-    void upload (const std::vector<GLfloat>& vertices,
-        int componentsPerVertex,
-        PrimitiveType type,
-        const std::vector<unsigned int>& indices = {});
+    /**
+     * Each derived class can internally call the protected "internal..."
+     * methods if it wants to reuse the logic.
+     */
+    virtual void upload(const std::vector<GLfloat> &vertexData,
+                        int componentsPerVertex,
+                        const std::vector<unsigned int> &indices = {}) = 0;
 
-    void cleanup () const;
+    virtual void draw() const = 0;
+
     // Called by your renderer or your Drawable
-    void bind () const;
-    void unbind () const;
+    void bind() const;
 
-    // The actual draw call
-    void draw () const;
+    void unbind() const;
 
     // Geometry metrics
-    glm::vec3 getCenterOfMass () const;
+    glm::vec3 getCenterOfMass() const;
 
-    void setExtents (const GLfloat& x,
-        const GLfloat& y,
-        const GLfloat& z);
-
-    const std::vector<glm::vec3>& getVertices () const {
-        return vertices;
-    }
-
-protected:
-    GLuint vao;
-    GLuint vbo;
-    GLuint ebo;
-
-    std::vector<glm::vec3> vertices;
-
-    PrimitiveType type;
-    // Internally used for glDrawArrays or glDrawElements
-    static GLenum convertPrimitiveType (PrimitiveType type);
+    void setExtents(const GLfloat &x,
+                    const GLfloat &y,
+                    const GLfloat &z);
 
     GLsizei vertexCount = 0;
-    GLsizei indexCount  = 0;
+    GLsizei indicesCount = 0;
+
+    const std::vector<glm::vec3> &getVertices() const { return vertices; }
+    const std::vector<unsigned int> &getIndices() const { return indices; }
+    const std::vector<glm::vec3> &getNormals() const { return normals; }
+
+protected:
+    GLuint VAO;
+    GLuint VBO;
+    GLuint EBO;
+
+    std::vector<glm::vec3> vertices;
+    std::vector<unsigned int> indices;
+    std::vector<glm::vec3> normals;
+
+    GLenum primitive_type = GL_POINTS;
+
+    // Helper: create, bind, or delete buffers.
+    void createBuffers();
+
+    void deleteBuffers();
+
+    void bindVAO() const;
+
+    void unbindVAO() const;
 
     // Geometry bounds
     GLfloat maxX = 0.0f;
